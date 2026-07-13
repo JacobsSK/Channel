@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChannelForge AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0C;
+  --bg-elev:#111114;
+  --surface:#17171B;
+  --surface-2:#1E1E24;
+  --border:#2A2A32;
+  --text:#F5F5F7;
+  --text-dim:#9A9AA5;
+  --text-faint:#57575F;
+  --red:#FF3B4E;
+  --red-2:#FF7A5C;
+  --red-glow:rgba(255,59,78,0.32);
+  --good:#3FD68A;
+  --bad:#FF5D6C;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-0.01em;}
+p{margin:0;}
+.mono{font-family:'JetBrains Mono',monospace;}
+button{font-family:inherit;cursor:pointer;}
+
+.clip-ticks{display:flex; gap:3px; align-items:flex-end; height:16px; margin-top:10px;}
+.clip-ticks span{width:3px; background:linear-gradient(180deg,var(--red),var(--red-2)); border-radius:2px; box-shadow:0 0 8px var(--red-glow);}
+
+#app{display:flex; min-height:100vh;}
+
+.sidebar{width:230px; flex-shrink:0; background:var(--bg-elev); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:20px 14px; position:sticky; top:0; height:100vh;}
+.brand{display:flex; align-items:center; gap:10px; padding:6px 8px 18px 8px;}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--red),var(--red-2));box-shadow:0 0 16px var(--red-glow); position:relative;}
+.brand-mark::after{content:"";position:absolute; inset:9px; border-left:8px solid #0A0A0C; border-top:5px solid transparent; border-bottom:5px solid transparent;}
+.brand-name{font-weight:700; font-size:15px;}
+.brand-sub{font-size:10px; color:var(--text-faint); letter-spacing:0.08em; text-transform:uppercase;}
+
+.channel-switch{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:16px;}
+.channel-switch select{background:transparent; border:none; color:var(--text); font-size:12.5px; font-weight:600; width:100%;}
+
+.nav-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; color:var(--text-dim); font-size:13.5px; font-weight:500; margin-bottom:2px; border:1px solid transparent; transition:all .15s;}
+.nav-item:hover{background:var(--surface); color:var(--text);}
+.nav-item.active{background:var(--surface-2); color:var(--text); border-color:var(--border);}
+.nav-item.active .nav-dot{background:var(--red); box-shadow:0 0 8px var(--red-glow);}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--text-faint); flex-shrink:0;}
+.nav-section-label{font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-faint); margin:16px 10px 6px;}
+.sidebar-foot{margin-top:auto; padding:10px 8px; border-top:1px solid var(--border); font-size:11px; color:var(--text-faint);}
+
+.main{flex:1; min-width:0; padding:28px 34px 60px; max-width:1260px;}
+.topbar{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:14px;}
+.page-title{font-size:24px; font-weight:700;}
+.page-sub{color:var(--text-dim); font-size:13.5px; margin-top:4px; max-width:600px;}
+
+.btn{display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px; font-weight:600; transition:all .15s;}
+.btn:hover{background:var(--surface-2); border-color:#3a3a44;}
+.btn-primary{background:linear-gradient(135deg,var(--red),#D6273B); border:none; color:#fff; box-shadow:0 4px 18px var(--red-glow);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:transparent; border:1px solid var(--border);}
+.btn-sm{padding:7px 12px; font-size:12px;}
+.btn:disabled{opacity:.5; cursor:not-allowed;}
+
+.card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px;}
+.card-tight{padding:14px 16px;}
+.grid{display:grid; gap:16px;}
+.grid-2{grid-template-columns:1fr 1fr;}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+@media(max-width:900px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .sidebar{display:none;} .main{padding:18px;}}
+
+label{font-size:12px; font-weight:600; color:var(--text-dim); display:block; margin-bottom:6px;}
+input,select,textarea{width:100%; background:var(--bg-elev); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:10px 12px; font-size:13.5px; font-family:inherit; outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--red);}
+textarea{resize:vertical; min-height:80px;}
+.field{margin-bottom:14px;}
+.hint{font-size:11.5px; color:var(--text-faint); margin-top:5px;}
+
+.tag{display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; background:var(--surface-2); color:var(--text-dim); border:1px solid var(--border);}
+.tag-good{color:var(--good); border-color:rgba(63,214,138,.3); background:rgba(63,214,138,.08);}
+.tag-red{color:var(--red-2); border-color:rgba(255,59,78,.3); background:rgba(255,59,78,.08);}
+
+.metric-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+.metric-label{font-size:11.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;}
+.metric-value{font-size:26px; font-weight:700; font-family:'Space Grotesk',sans-serif;}
+
+.empty{border:1px dashed var(--border); border-radius:var(--radius); padding:36px 20px; text-align:center; color:var(--text-dim);}
+.empty h4{color:var(--text); margin-bottom:6px;}
+
+.spinner{width:16px;height:16px;border-radius:50%; border:2px solid rgba(255,255,255,.2); border-top-color:var(--red); animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.tabs{display:flex; gap:6px; border-bottom:1px solid var(--border); margin-bottom:20px; flex-wrap:wrap;}
+.tab{padding:9px 14px; font-size:12.5px; font-weight:600; color:var(--text-dim); border-bottom:2px solid transparent; margin-bottom:-1px;}
+.tab.active{color:var(--text); border-color:var(--red);}
+
+.opt-card{border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:all .15s; background:var(--bg-elev);}
+.opt-card:hover{border-color:var(--red); box-shadow:0 0 0 1px var(--red-glow);}
+.opt-card.selected{border-color:var(--red); background:rgba(255,59,78,.06);}
+
+.progress-bar{height:6px; background:var(--bg-elev); border-radius:6px; overflow:hidden; border:1px solid var(--border);}
+.progress-fill{height:100%; background:linear-gradient(90deg,var(--red),var(--red-2)); box-shadow:0 0 10px var(--red-glow);}
+
+.checklist-item{display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12.5px;}
+.checklist-item input{width:auto;}
+
+.toast{position:fixed; bottom:22px; right:22px; background:var(--surface-2); border:1px solid var(--border); padding:12px 16px; border-radius:8px; font-size:13px; z-index:200; box-shadow:0 8px 30px rgba(0,0,0,.5);}
+.toast.err{border-color:rgba(255,93,108,.4); color:#ffb3ba;}
+.toast.good{border-color:rgba(63,214,138,.4); color:#a8f0c8;}
+
+.platform-chip{display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--surface-2); margin:2px;}
+.platform-chip.on{border-color:var(--red); color:var(--red-2); background:rgba(255,59,78,.08);}
+
+a{color:var(--red-2); text-decoration:none;}
+.divider{height:1px; background:var(--border); margin:18px 0;}
+.flex{display:flex;} .between{justify-content:space-between;} .center{align-items:center;}
+.gap8{gap:8px;} .gap12{gap:12px;}
+.mb8{margin-bottom:8px;} .mb12{margin-bottom:12px;} .mb16{margin-bottom:16px;} .mb20{margin-bottom:20px;}
+.small{font-size:12px;} .dim{color:var(--text-dim);} .faint{color:var(--text-faint);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast-root"></div>
+
+<script>
+/* ============================================================
+   ChannelForge AI — single-file app
+   Persistence: window.storage (personal scope, key "cf_state_v1")
+   AI content: Anthropic API, client-side fetch
+   Clipping Studio: works from a pasted transcript (actual video
+     download / auto-transcription / auto-cutting needs a backend —
+     that's the Railway/Express proxy, same as the rest of the suite;
+     this build is fully wired to plug straight into that once it's live)
+   ============================================================ */
+
+const STORAGE_KEY = "cf_state_v1";
+const PLATFORMS = ["YouTube Shorts","TikTok","Instagram Reels","Twitter/X","Facebook"];
+
+const DEFAULT_STATE = {
+  onboardingDone:false, onboardingStep:0,
+  channels:[],           // {id,name,niche,description,format,uploadFreq,audience,createdAt}
+  activeChannelId:null,
+  data:{},                 // channelId -> {ideas:[], pipeline:[], clips:[], revenue:{...}}
+  settings:{ elevenlabsKey:"", youtubeConnected:false, zarRate:18.5 },
+  activeTab:"dashboard"
+};
+function freshChannelData(){
+  return {
+    ideas:[],
+    pipeline:[], // {id,title,hook,viewPotential,why,format,status,script,titles,thumbnailBrief,tags,description,scheduledDate,checklist:{}}
+    clips:[],    // {id,sourceLabel,affiliate,affiliateLink,moments:[],createdAt}
+    revenue:{ subscribers:0, watchHours:0, shortsViews:0, adsenseUSD:0, sponsorships:[], digitalProducts:[], memberships:[], monthlyGoalUSD:1000 }
+  };
+}
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+/* ---------- storage ---------- */
+async function loadState(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
+    }
+  }catch(e){}
+  render();
+}
+let saveTimer=null;
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
+    catch(e){ showToast("Couldn't save — storage error", true); }
+  }, 250);
+}
+function cd(){ // current channel data, creating if missing
+  if(!state.activeChannelId) return null;
+  if(!state.data[state.activeChannelId]) state.data[state.activeChannelId] = freshChannelData();
+  return state.data[state.activeChannelId];
+}
+function currentChannel(){ return state.channels.find(c=>c.id===state.activeChannelId); }
+
+function showToast(msg, isErr, isGood){
+  const root = document.getElementById('toast-root');
+  const el = document.createElement('div');
+  el.className='toast'+(isErr?' err':'')+(isGood?' good':'');
+  el.textContent = msg;
+  root.appendChild(el);
+  setTimeout(()=>el.remove(), 4200);
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+/* ---------- Anthropic API helper (robust JSON handling) ---------- */
+function extractJson(raw){
+  let clean = raw.replace(/```json|```/g,"").trim();
+  const firstObj = clean.indexOf('{'); const firstArr = clean.indexOf('[');
+  let start=-1;
+  if(firstObj===-1) start=firstArr; else if(firstArr===-1) start=firstObj; else start=Math.min(firstObj,firstArr);
+  const lastObj = clean.lastIndexOf('}'); const lastArr = clean.lastIndexOf(']');
+  const end = Math.max(lastObj,lastArr);
+  if(start!==-1 && end!==-1 && end>start) clean = clean.slice(start, end+1);
+  clean = clean.replace(/,\s*([}\]])/g,'$1');
+  return JSON.parse(clean);
+}
+async function callClaude(userPrompt, systemPrompt, wantJson){
+  const body = { model:"claude-sonnet-4-6", max_tokens:4000, messages:[{role:"user", content:userPrompt}] };
+  if(systemPrompt) body.system = systemPrompt;
+  let res;
+  try{
+    res = await fetch("/api/claude", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)
+    });
+  }catch(e){ throw new Error("Network error reaching the API — check your connection and try again."); }
+  if(!res.ok){
+    let detail=""; try{ const eb = await res.json(); detail = eb?.error?.message||""; }catch(e){}
+    throw new Error(`API error ${res.status}${detail?": "+detail:""}`);
+  }
+  const data = await res.json();
+  const text = (data.content||[]).map(b=>b.text||"").join("\n");
+  if(wantJson){
+    try{ return extractJson(text); }
+    catch(e){ console.error("Unparseable output:", text); throw new Error("The AI's response wasn't valid JSON — usually clears up on retry."); }
+  }
+  return text;
+}
+
+/* ============================================================ ROUTER ============================================================ */
+function render(){
+  const app = document.getElementById('app');
+  if(!state.onboardingDone){ app.innerHTML = renderOnboarding(); bindOnboarding(); return; }
+  app.innerHTML = `${renderSidebar()}<div class="main">${renderTab(state.activeTab)}</div>`;
+  bindGlobal();
+  bindTab(state.activeTab);
+}
+
+const NAV = [
+  {id:"dashboard", label:"Dashboard", section:"Overview"},
+  {id:"setup", label:"Niche & Channel Setup", section:"Build"},
+  {id:"content", label:"Content Engine", section:"Build"},
+  {id:"clipping", label:"Clipping Studio", section:"Build"},
+  {id:"calendar", label:"Content Calendar", section:"Grow"},
+  {id:"revenue", label:"Revenue & Monetization", section:"Grow"},
+  {id:"settings", label:"Settings", section:"Grow"},
+];
+function renderSidebar(){
+  let sections={}; NAV.forEach(n=>{ sections[n.section]=sections[n.section]||[]; sections[n.section].push(n); });
+  const ch = currentChannel();
+  let html = `<div class="sidebar"><div class="brand"><div class="brand-mark"></div>
+    <div><div class="brand-name">ChannelForge AI</div><div class="brand-sub">Project X</div></div></div>`;
+  html += `<div class="channel-switch"><select id="channel-switch">
+      ${state.channels.map(c=>`<option value="${c.id}" ${c.id===state.activeChannelId?'selected':''}>${c.name}</option>`).join('')}
+      <option value="__new__">+ New channel</option>
+    </select></div>`;
+  Object.keys(sections).forEach(sec=>{
+    html += `<div class="nav-section-label">${sec}</div>`;
+    sections[sec].forEach(n=>{ html += `<div class="nav-item ${state.activeTab===n.id?'active':''}" data-nav="${n.id}"><span class="nav-dot"></span>${n.label}</div>`; });
+  });
+  html += `<div class="sidebar-foot">${state.channels.length} channel${state.channels.length!==1?'s':''} · ${ch?ch.niche:'—'}</div></div>`;
+  return html;
+}
+function bindGlobal(){
+  document.querySelectorAll('[data-nav]').forEach(el=>el.onclick=()=>{ state.activeTab=el.dataset.nav; render(); });
+  const sw = document.getElementById('channel-switch');
+  if(sw) sw.onchange = e=>{
+    if(e.target.value==='__new__'){ state.activeChannelId=null; state.activeTab='setup'; render(); return; }
+    state.activeChannelId = e.target.value; persist(); render();
+  };
+}
+
+/* ============================================================ ONBOARDING ============================================================ */
+const OB_STEPS = [
+  {title:"Welcome to ChannelForge AI", body:"Pick a niche, build the channel brief, generate video ideas and scripts, then clip and repost long-form content across every platform — a faceless YouTube channel run from one command center."},
+  {title:"Step 1 — Find a niche", body:"AI scans what's growing on YouTube right now and hands you 8 niche options with monetization timelines and competition level."},
+  {title:"Step 2 — Set the channel brief", body:"Name, description, format, upload frequency, audience — everything generated after this matches that brief automatically."},
+  {title:"Step 3 — Generate ideas + scripts", body:"10 video ideas per session, full Shorts or long-form scripts, titles, thumbnail briefs, and SEO tags — niche-toned throughout."},
+  {title:"Step 4 — Clip and repost", body:"New: paste a podcast or long-form transcript, get back the clip-worthy moments with captions ready for Shorts, TikTok, Reels, Twitter/X, and Facebook — including an affiliate mode for repurposing other people's popular content."},
+];
+function renderOnboarding(){
+  const step = state.onboardingStep; const s = OB_STEPS[step]; const pct = Math.round(((step+1)/OB_STEPS.length)*100);
+  return `<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div class="card" style="max-width:520px; width:100%;">
+      <div class="flex between center mb16"><span class="tag tag-red">Step ${step+1} / ${OB_STEPS.length}</span><button class="btn btn-ghost btn-sm" data-ob="skip">Skip for now</button></div>
+      <div class="progress-bar mb20"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <h2 style="font-size:22px; margin-bottom:6px;">${s.title}</h2>
+      <div class="clip-ticks">${Array.from({length:14}).map((_,i)=>`<span style="height:${6+(i%5)*3}px;"></span>`).join('')}</div>
+      <p class="dim" style="margin-top:14px; line-height:1.6; font-size:14px;">${s.body}</p>
+      <div class="flex gap12" style="margin-top:26px;">
+        ${step>0?`<button class="btn btn-ghost" data-ob="back">Back</button>`:''}
+        <button class="btn btn-primary" data-ob="next" style="margin-left:auto;">${step===OB_STEPS.length-1?'Start building':'Continue'}</button>
+      </div>
+    </div></div>`;
+}
+function bindOnboarding(){
+  document.querySelector('[data-ob="skip"]').onclick=()=>{ state.onboardingDone=true; persist(); render(); };
+  const back=document.querySelector('[data-ob="back"]'); if(back) back.onclick=()=>{ state.onboardingStep--; render(); };
+  document.querySelector('[data-ob="next"]').onclick=()=>{
+    if(state.onboardingStep===OB_STEPS.length-1){ state.onboardingDone=true; state.activeTab = state.channels.length?'dashboard':'setup'; persist(); render(); }
+    else{ state.onboardingStep++; render(); }
+  };
+}
+
+/* ============================================================ TAB ROUTER ============================================================ */
+function renderTab(tab){
+  if(!state.activeChannelId && tab!=='setup' && tab!=='settings') return renderNoChannel();
+  switch(tab){
+    case "dashboard": return renderDashboard();
+    case "setup": return renderSetup();
+    case "content": return renderContent();
+    case "clipping": return renderClipping();
+    case "calendar": return renderCalendar();
+    case "revenue": return renderRevenue();
+    case "settings": return renderSettings();
+    default: return "";
+  }
+}
+function bindTab(tab){
+  if(!state.activeChannelId && tab!=='setup' && tab!=='settings'){ bindGlobal(); return; }
+  switch(tab){
+    case "dashboard": return bindDashboard();
+    case "setup": return bindSetup();
+    case "content": return bindContent();
+    case "clipping": return bindClipping();
+    case "calendar": return bindCalendar();
+    case "revenue": return bindRevenue();
+    case "settings": return bindSettings();
+  }
+}
+function renderNoChannel(){
+  return `<div class="topbar"><div class="page-title">No channel yet</div></div>${emptyState("Set up your first channel","Find a niche and build your channel brief to unlock the rest of the app.","setup","Go to Setup")}`;
+}
+function emptyState(title,body,navTo,cta){
+  return `<div class="empty"><h4>${title}</h4><p class="small mb12">${body}</p>${navTo?`<button class="btn btn-primary btn-sm" data-nav="${navTo}">${cta}</button>`:''}</div>`;
+}
+
+/* ============================================================ DASHBOARD ============================================================ */
+function renderDashboard(){
+  const d = cd(); const ch = currentChannel();
+  const pub = d.pipeline.filter(v=>v.status==='Published').length;
+  const streak = computeStreak(d.pipeline);
+  return `
+  <div class="topbar"><div><div class="page-title">${ch.name}</div><div class="page-sub">${ch.niche} · ${ch.format} · ${ch.uploadFreq}</div></div>
+    <button class="btn btn-primary" data-nav="content">+ New video idea</button></div>
+  <div class="grid grid-4 mb20">
+    <div class="metric-card"><div class="metric-label">Videos in pipeline</div><div class="metric-value">${d.pipeline.length}</div></div>
+    <div class="metric-card"><div class="metric-label">Published</div><div class="metric-value">${pub}</div></div>
+    <div class="metric-card"><div class="metric-label">Clips generated</div><div class="metric-value">${d.clips.reduce((a,c)=>a+c.moments.length,0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Upload streak</div><div class="metric-value">${streak}</div></div>
+  </div>
+  <div class="card mb20">
+    <div class="flex between center mb12"><h4>Monetization progress</h4></div>
+    ${renderMonetizationBars(d.revenue)}
+  </div>
+  <h4 class="mb12">Pipeline snapshot</h4>
+  ${d.pipeline.length===0?emptyState("No videos yet","Generate ideas in the Content Engine.","content","Go to Content Engine"):
+    `<div class="grid grid-3">${d.pipeline.slice(-6).reverse().map(v=>`<div class="card card-tight">
+      <div class="flex between center mb8"><span class="tag tag-red">${v.format}</span><span class="tag">${v.status}</span></div>
+      <h4 style="font-size:13.5px;">${v.title}</h4></div>`).join('')}</div>`}
+  `;
+}
+function computeStreak(pipeline){
+  const pubs = pipeline.filter(v=>v.status==='Published' && v.scheduledDate).sort((a,b)=>new Date(b.scheduledDate)-new Date(a.scheduledDate));
+  if(pubs.length===0) return "0 weeks";
+  return Math.min(pubs.length, 12) + " weeks";
+}
+function renderMonetizationBars(rev){
+  const subPct = Math.min(100, Math.round((rev.subscribers/1000)*100));
+  const whPct = Math.min(100, Math.round((rev.watchHours/4000)*100));
+  const shPct = Math.min(100, Math.round((rev.shortsViews/10000000)*100));
+  return `
+  <div class="mb12"><div class="flex between small mb8"><span>Subscribers</span><span class="dim">${rev.subscribers} / 1,000</span></div><div class="progress-bar"><div class="progress-fill" style="width:${subPct}%"></div></div></div>
+  <div class="mb12"><div class="flex between small mb8"><span>Watch hours (long-form path)</span><span class="dim">${rev.watchHours} / 4,000</span></div><div class="progress-bar"><div class="progress-fill" style="width:${whPct}%"></div></div></div>
+  <div><div class="flex between small mb8"><span>Shorts views (Shorts path)</span><span class="dim">${rev.shortsViews.toLocaleString()} / 10,000,000</span></div><div class="progress-bar"><div class="progress-fill" style="width:${shPct}%"></div></div></div>
+  `;
+}
+function bindDashboard(){ bindGlobal(); }
+
+/* ============================================================ SETUP (niche research + channel brief) ============================================================ */
+let setupUi = { step: "niche", niches:null, selectedNiche:null, nameOptions:null, form:{ name:"", description:"", format:"Both", uploadFreq:"3x per week", audience:"" }, loading:false };
+
+function renderSetup(){
+  return `
+  <div class="topbar"><div><div class="page-title">Niche &amp; Channel Setup</div><div class="page-sub">Find what's growing, then lock in the brief every video will follow.</div></div></div>
+  <div class="card mb20">
+    <button class="btn btn-primary" id="btn-find-niche" ${setupUi.loading?'disabled':''}>${setupUi.loading?'<span class="spinner"></span> Scanning YouTube trends…':'Find a niche'}</button>
+  </div>
+  ${setupUi.niches ? `<div class="grid grid-2 mb20">${setupUi.niches.map((n,i)=>`
+    <div class="opt-card ${setupUi.selectedNiche===i?'selected':''}" data-niche="${i}">
+      <div class="flex between center mb8"><strong style="font-size:14px;">${n.name}</strong><span class="tag tag-red">${n.competition} competition</span></div>
+      <p class="dim small mb8">${n.whyGrowing}</p>
+      <div class="flex gap8" style="flex-wrap:wrap;">
+        <span class="tag">${n.contentStyle}</span><span class="tag">~${n.timeToMonetization}</span>
+      </div>
+      <p class="faint small" style="margin-top:8px;">Beyond AdSense: ${n.beyondAdsense}</p>
+    </div>`).join('')}</div>` : ''}
+  ${setupUi.selectedNiche!==null ? renderChannelBriefForm() : ''}
+  `;
+}
+function renderChannelBriefForm(){
+  const n = setupUi.niches[setupUi.selectedNiche];
+  return `
+  <div class="card">
+    <h4 class="mb12">Channel brief — ${n.name}</h4>
+    <div class="field"><label>Channel name</label>
+      <div class="flex gap8">
+        <input id="brief-name" value="${setupUi.form.name}" placeholder="Type your own, or generate options"/>
+        <button class="btn btn-sm" id="btn-name-options" ${setupUi.loading?'disabled':''}>${setupUi.loading?'…':'Suggest 5'}</button>
+      </div>
+      ${setupUi.nameOptions?`<div class="flex gap8 mb8" style="flex-wrap:wrap; margin-top:8px;">${setupUi.nameOptions.map(nm=>`<span class="tag tag-red" style="cursor:pointer;" data-pickname="${nm}">${nm}</span>`).join('')}</div>`:''}
+    </div>
+    <div class="field"><label>Channel description</label><textarea id="brief-desc" placeholder="AI-written or your own">${setupUi.form.description}</textarea>
+      <button class="btn btn-sm" id="btn-write-desc" style="margin-top:8px;" ${setupUi.loading?'disabled':''}>Write description</button>
+    </div>
+    <div class="grid grid-3 mb12">
+      <div class="field"><label>Content format</label><select id="brief-format">${["Shorts only","Long-form only","Both"].map(f=>`<option ${setupUi.form.format===f?'selected':''}>${f}</option>`).join('')}</select></div>
+      <div class="field"><label>Upload frequency</label><select id="brief-freq">${["Daily","3x per week","Weekly"].map(f=>`<option ${setupUi.form.uploadFreq===f?'selected':''}>${f}</option>`).join('')}</select></div>
+      <div class="field"><label>Target audience</label><input id="brief-audience" value="${setupUi.form.audience}" placeholder="e.g. men 25-40 into tech"/></div>
+    </div>
+    <button class="btn btn-primary" id="btn-save-channel">Save channel</button>
+  </div>`;
+}
+function bindSetup(){
+  bindGlobal();
+  const findBtn = document.getElementById('btn-find-niche');
+  if(findBtn) findBtn.onclick = async ()=>{
+    setupUi.loading=true; render();
+    try{
+      const niches = await callClaude(
+        `Give me exactly 8 currently-growing faceless YouTube niche ideas. Return ONLY JSON array, each item: {"name":"","whyGrowing":"","timeToMonetization":"e.g. 4-6 months","competition":"low/medium/high","contentStyle":"shorts only/long-form only/both","beyondAdsense":"sponsorships, merch, digital products etc"}.`,
+        "You are a YouTube growth strategist. Output only valid JSON.", true
+      );
+      setupUi.niches = niches; setupUi.selectedNiche = null;
+    }catch(e){ showToast(e.message, true); }
+    setupUi.loading=false; render();
+  };
+  document.querySelectorAll('[data-niche]').forEach(el=>el.onclick=()=>{ setupUi.selectedNiche=parseInt(el.dataset.niche); render(); });
+
+  const nameBtn = document.getElementById('btn-name-options');
+  if(nameBtn) nameBtn.onclick = async ()=>{
+    const n = setupUi.niches[setupUi.selectedNiche];
+    setupUi.loading=true; render();
+    try{
+      const names = await callClaude(`Suggest 5 punchy YouTube channel names for a faceless channel in the "${n.name}" niche. Return ONLY a JSON array of 5 strings.`, "Output only valid JSON.", true);
+      setupUi.nameOptions = names;
+    }catch(e){ showToast(e.message, true); }
+    setupUi.loading=false; render();
+  };
+  document.querySelectorAll('[data-pickname]').forEach(el=>el.onclick=()=>{ setupUi.form.name = el.dataset.pickname; render(); });
+
+  const nameInput = document.getElementById('brief-name'); if(nameInput) nameInput.oninput=e=>setupUi.form.name=e.target.value;
+  const descInput = document.getElementById('brief-desc'); if(descInput) descInput.oninput=e=>setupUi.form.description=e.target.value;
+  const fmtSel = document.getElementById('brief-format'); if(fmtSel) fmtSel.onchange=e=>setupUi.form.format=e.target.value;
+  const freqSel = document.getElementById('brief-freq'); if(freqSel) freqSel.onchange=e=>setupUi.form.uploadFreq=e.target.value;
+  const audInput = document.getElementById('brief-audience'); if(audInput) audInput.oninput=e=>setupUi.form.audience=e.target.value;
+
+  const descBtn = document.getElementById('btn-write-desc');
+  if(descBtn) descBtn.onclick = async ()=>{
+    const n = setupUi.niches[setupUi.selectedNiche];
+    setupUi.loading=true; render();
+    try{
+      const desc = await callClaude(`Write a compelling 2-3 sentence YouTube channel description for a channel called "${setupUi.form.name||n.name}" in the "${n.name}" niche, targeting: ${setupUi.form.audience||'general audience'}. Plain text only, no JSON.`, "You write channel descriptions.", false);
+      setupUi.form.description = desc.trim();
+    }catch(e){ showToast(e.message, true); }
+    setupUi.loading=false; render();
+  };
+
+  const saveBtn = document.getElementById('btn-save-channel');
+  if(saveBtn) saveBtn.onclick = ()=>{
+    if(!setupUi.form.name.trim()){ showToast("Give the channel a name first", true); return; }
+    const n = setupUi.niches[setupUi.selectedNiche];
+    const channel = { id: uid(), name: setupUi.form.name, niche: n.name, description: setupUi.form.description, format: setupUi.form.format, uploadFreq: setupUi.form.uploadFreq, audience: setupUi.form.audience, createdAt: Date.now() };
+    state.channels.push(channel);
+    state.data[channel.id] = freshChannelData();
+    state.activeChannelId = channel.id;
+    persist();
+    setupUi = { step:"niche", niches:null, selectedNiche:null, nameOptions:null, form:{name:"",description:"",format:"Both",uploadFreq:"3x per week",audience:""}, loading:false };
+    state.activeTab = "content";
+    showToast("Channel saved", false, true);
+    render();
+  };
+}
+
+/* ============================================================ CONTENT ENGINE ============================================================ */
+let contentUi = { tab:"ideas", loading:false, activeVideoId:null };
+
+function renderContent(){
+  const d = cd(); const ch = currentChannel();
+  return `
+  <div class="topbar"><div><div class="page-title">Content Engine</div><div class="page-sub">Ideas, scripts, titles, thumbnails, and SEO — all tuned to ${ch.niche}.</div></div></div>
+  <div class="tabs">
+    <div class="tab ${contentUi.tab==='ideas'?'active':''}" data-ctab="ideas">Video Ideas</div>
+    <div class="tab ${contentUi.tab==='pipeline'?'active':''}" data-ctab="pipeline">Content Pipeline (${d.pipeline.length})</div>
+  </div>
+  ${contentUi.tab==='ideas'?renderIdeasTab(d,ch):renderPipelineTab(d)}
+  `;
+}
+function renderIdeasTab(d,ch){
+  return `
+  <button class="btn btn-primary mb16" id="btn-gen-ideas" ${contentUi.loading?'disabled':''}>${contentUi.loading?'<span class="spinner"></span> Generating…':'Generate 10 video ideas'}</button>
+  ${d.ideas.length===0?emptyState("No ideas yet","Generate ideas based on your channel brief.",null,null):
+    `<div class="grid grid-2">${d.ideas.map(idea=>`
+      <div class="card">
+        <div class="flex between center mb8"><strong style="font-size:14px;">${idea.title}</strong><span class="tag tag-red">${idea.viewPotential}</span></div>
+        <p class="dim small mb8"><strong>Hook:</strong> ${idea.hookConcept}</p>
+        <p class="faint small mb12">${idea.why}</p>
+        <button class="btn btn-sm" data-lock="${idea.id}">Send to Pipeline →</button>
+      </div>`).join('')}</div>`}
+  `;
+}
+function renderPipelineTab(d){
+  if(d.pipeline.length===0) return emptyState("Pipeline is empty","Lock in an idea to start scripting it.",null,null);
+  const v = d.pipeline.find(x=>x.id===contentUi.activeVideoId) || d.pipeline[d.pipeline.length-1];
+  return `
+  <div class="grid" style="grid-template-columns:280px 1fr; gap:16px;">
+    <div class="card card-tight" style="height:fit-content;">
+      ${d.pipeline.map(p=>`<div class="flex between center" data-selvid="${p.id}" style="padding:8px 4px; cursor:pointer; border-radius:6px; ${p.id===v.id?'background:var(--surface-2);':''}">
+        <span class="small">${p.title.slice(0,26)}${p.title.length>26?'…':''}</span><span class="tag">${p.status}</span></div>`).join('')}
+    </div>
+    <div class="card">${renderVideoWorkspace(v)}</div>
+  </div>`;
+}
+function renderVideoWorkspace(v){
+  return `
+  <div class="flex between center mb12">
+    <div><h3 style="font-size:16px;">${v.title}</h3><p class="faint small">${v.format}</p></div>
+    <select data-status="${v.id}" style="max-width:180px;">${["Idea","Script Written","Video In Production","Ready to Upload","Published"].map(s=>`<option ${v.status===s?'selected':''}>${s}</option>`).join('')}</select>
+  </div>
+  <div class="tabs">
+    <div class="tab ${!v._sub||v._sub==='script'?'active':''}" data-vsub="${v.id}:script">Script</div>
+    <div class="tab ${v._sub==='titles'?'active':''}" data-vsub="${v.id}:titles">Titles &amp; Thumbnail</div>
+    <div class="tab ${v._sub==='seo'?'active':''}" data-vsub="${v.id}:seo">SEO</div>
+    <div class="tab ${v._sub==='checklist'?'active':''}" data-vsub="${v.id}:checklist">Checklist</div>
+  </div>
+  ${renderVideoSub(v)}
+  `;
+}
+function renderVideoSub(v){
+  const sub = v._sub || 'script';
+  if(sub==='script') return `
+    ${v.script ? `<div style="max-height:300px; overflow-y:auto; background:var(--bg-elev); border:1px solid var(--border); border-radius:8px; padding:14px; white-space:pre-line; font-size:13px; line-height:1.6;">${v.script}</div>`
+      : emptyState("No script yet","Generate one below.",null,null)}
+    <button class="btn btn-primary mb8" data-genscript="${v.id}" style="margin-top:12px;" ${contentUi.loading?'disabled':''}>${contentUi.loading?'<span class="spinner"></span> Writing…':'Generate script'}</button>
+    <button class="btn btn-sm" data-tovoiceover="${v.id}">Send to voiceover (Settings → ElevenLabs)</button>
+    <button class="btn btn-sm" data-toclip="${v.id}">Send to Clipping Studio</button>
+  `;
+  if(sub==='titles') return `
+    <div class="flex gap8 mb16"><button class="btn" data-gentitles="${v.id}">Generate titles + thumbnail brief</button></div>
+    ${v.titles?`<div class="mb16">${v.titles.map(t=>`<div class="card card-tight mb8">${t}</div>`).join('')}</div>`:''}
+    ${v.thumbnailBrief?`<div class="card card-tight"><strong class="small">Thumbnail brief</strong><p class="small dim" style="margin-top:6px;">${v.thumbnailBrief}</p></div>`:''}
+  `;
+  if(sub==='seo') return `
+    <button class="btn mb16" data-genseo="${v.id}">Generate tags + description</button>
+    ${v.tags?`<div class="mb12"><strong class="small">Tags</strong><p class="small dim" style="margin-top:6px;">${v.tags}</p></div>`:''}
+    ${v.description?`<div><strong class="small">Description</strong><p class="small dim" style="margin-top:6px; white-space:pre-line;">${v.description}</p></div>`:''}
+  `;
+  if(sub==='checklist') return renderChecklist(v);
+  return '';
+}
+const CHECKLIST_ITEMS = ["Script written","Voiceover recorded","Animation/visuals created","Captions added","Thumbnail created","Title and description finalized","Tags added","Scheduled for upload"];
+function renderChecklist(v){
+  return `<div class="field mb16"><label>Scheduled publish date</label><input type="date" data-schedule="${v.id}" value="${v.scheduledDate||''}"/></div>
+  ${CHECKLIST_ITEMS.map(item=>`<div class="checklist-item"><input type="checkbox" data-check="${v.id}:${item}" ${v.checklist[item]?'checked':''}/> ${item}</div>`).join('')}`;
+}
+function bindContent(){
+  bindGlobal();
+  document.querySelectorAll('[data-ctab]').forEach(el=>el.onclick=()=>{ contentUi.tab=el.dataset.ctab; render(); });
+  const genIdeas = document.getElementById('btn-gen-ideas');
+  if(genIdeas) genIdeas.onclick = async ()=>{
+    const ch = currentChannel(); const d = cd();
+    contentUi.loading=true; render();
+    try{
+      const ideas = await callClaude(
+        `Based on this YouTube channel brief — niche: "${ch.niche}", format: ${ch.format}, audience: ${ch.audience||'general'} — generate 10 video ideas. Return ONLY JSON array, each: {"title":"","hookConcept":"","viewPotential":"e.g. High/Medium or an estimate","why":""}.`,
+        "You are a viral YouTube content strategist. Output only valid JSON.", true
+      );
+      d.ideas = ideas.map(i=>({...i, id:uid()}));
+      persist();
+    }catch(e){ showToast(e.message, true); }
+    contentUi.loading=false; render();
+  };
+  document.querySelectorAll('[data-lock]').forEach(el=>el.onclick=()=>{
+    const d = cd(); const idea = d.ideas.find(i=>i.id===el.dataset.lock);
+    const ch = currentChannel();
+    const video = { id: uid(), title: idea.title, hook: idea.hookConcept, viewPotential: idea.viewPotential, why: idea.why,
+      format: ch.format==='Both' ? (Math.random()>0.5?'Short':'Long-form') : ch.format, status:"Idea", script:null, titles:null, thumbnailBrief:null, tags:null, description:null, scheduledDate:null,
+      checklist:{} };
+    d.pipeline.push(video); persist();
+    contentUi.tab="pipeline"; contentUi.activeVideoId=video.id;
+    showToast("Sent to pipeline", false, true); render();
+  });
+  document.querySelectorAll('[data-selvid]').forEach(el=>el.onclick=()=>{ contentUi.activeVideoId=el.dataset.selvid; render(); });
+  document.querySelectorAll('[data-status]').forEach(el=>el.onchange=e=>{
+    const d = cd(); const v = d.pipeline.find(x=>x.id===el.dataset.status); v.status=e.target.value; persist(); render();
+  });
+  document.querySelectorAll('[data-vsub]').forEach(el=>el.onclick=()=>{
+    const [id,sub] = el.dataset.vsub.split(':'); const d=cd(); const v=d.pipeline.find(x=>x.id===id); v._sub=sub; render();
+  });
+  document.querySelectorAll('[data-schedule]').forEach(el=>el.onchange=e=>{ const d=cd(); const v=d.pipeline.find(x=>x.id===el.dataset.schedule); v.scheduledDate=e.target.value; persist(); });
+  document.querySelectorAll('[data-check]').forEach(el=>el.onchange=e=>{
+    const [id,item]=el.dataset.check.split(':'); const d=cd(); const v=d.pipeline.find(x=>x.id===id); v.checklist[item]=e.target.checked; persist();
+  });
+  document.querySelectorAll('[data-toclip]').forEach(el=>el.onclick=()=>{ state.activeTab='clipping'; render(); });
+
+  const genScriptBtns = document.querySelectorAll('[data-genscript]');
+  genScriptBtns.forEach(el=>el.onclick=async ()=>{
+    const d = cd(); const ch = currentChannel(); const v = d.pipeline.find(x=>x.id===el.dataset.genscript);
+    contentUi.loading=true; render();
+    try{
+      const isShort = v.format!=='Long-form';
+      const prompt = isShort
+        ? `Write a full under-60-second YouTube Shorts script for "${v.title}" in the "${ch.niche}" niche. Tone matched to this niche. Include: HOOK (first 3 seconds, scroll-stopper), MAIN CONTENT, CTA. Also include on-screen text suggestions and voiceover pace/tone directions. Plain text, clearly labeled sections, no JSON.`
+        : `Write a full 5-20 minute long-form YouTube video script for "${v.title}" in the "${ch.niche}" niche. Tone matched to this niche. Include: INTRO HOOK, CHAPTERS with approximate timestamps, OUTRO with CTA and subscribe reminder. Include on-screen text suggestions and voiceover pace/tone directions. Plain text, clearly labeled sections, no JSON.`;
+      const script = await callClaude(prompt, "You are an expert YouTube scriptwriter who matches tone to niche.", false);
+      v.script = script; v.status = v.status==='Idea' ? 'Script Written' : v.status; persist();
+    }catch(e){ showToast(e.message, true); }
+    contentUi.loading=false; render();
+  });
+
+  document.querySelectorAll('[data-gentitles]').forEach(el=>el.onclick=async ()=>{
+    const d = cd(); const ch = currentChannel(); const v = d.pipeline.find(x=>x.id===el.dataset.gentitles);
+    showToast("Writing titles + thumbnail brief…", false, true);
+    try{
+      const result = await callClaude(
+        `For a YouTube video titled "${v.title}" in the "${ch.niche}" niche, give 3 SEO/CTR-optimized title alternatives and a thumbnail brief (what to show, text overlay, emotion to trigger). Return ONLY JSON: {"titles":["","",""],"thumbnailBrief":""}.`,
+        "Output only valid JSON.", true
+      );
+      v.titles = result.titles; v.thumbnailBrief = result.thumbnailBrief; persist(); render();
+    }catch(e){ showToast(e.message, true); }
+  });
+  document.querySelectorAll('[data-genseo]').forEach(el=>el.onclick=async ()=>{
+    const d = cd(); const ch = currentChannel(); const v = d.pipeline.find(x=>x.id===el.dataset.genseo);
+    showToast("Writing SEO tags + description…", false, true);
+    try{
+      const result = await callClaude(
+        `For a YouTube video titled "${v.title}" in the "${ch.niche}" niche, generate 10-15 SEO tags (comma separated) and a keyword-rich video description (3-4 sentences). Return ONLY JSON: {"tags":"tag1, tag2, ...","description":""}.`,
+        "Output only valid JSON.", true
+      );
+      v.tags = result.tags; v.description = result.description; persist(); render();
+    }catch(e){ showToast(e.message, true); }
+  });
+}
+
+/* ============================================================ CLIPPING STUDIO (new) ============================================================ */
+let clipUi = { sourceLabel:"", transcript:"", affiliateMode:false, affiliateLink:"", affiliateProduct:"", loading:false };
+
+function renderClipping(){
+  const d = cd();
+  return `
+  <div class="topbar"><div><div class="page-title">Clipping Studio</div><div class="page-sub">Turn a long podcast or video into short clips for every platform — including an affiliate mode for repurposing other people's popular content.</div></div></div>
+  <div class="card mb20">
+    <div class="field"><label>Source label (podcast/video title or URL, for reference)</label><input id="clip-source" value="${clipUi.sourceLabel}" placeholder="e.g. Joe Rogan #2100 or a YouTube URL"/></div>
+    <div class="field"><label>Transcript</label><textarea id="clip-transcript" placeholder="Paste the transcript or a rough summary of the video here" style="min-height:160px;">${clipUi.transcript}</textarea>
+      <p class="hint">Auto-fetching video/audio and transcribing it needs a backend (download + Whisper/ASR) — same Railway proxy the rest of the suite is heading to. For now, paste a transcript (YouTube auto-captions, a podcast transcript, or your own notes) and the analysis below works exactly the same either way.</p>
+    </div>
+    <div class="flex gap8 mb12" style="align-items:center;">
+      <input type="checkbox" id="clip-affiliate" ${clipUi.affiliateMode?'checked':''} style="width:auto;"/>
+      <label style="margin:0;">Affiliate mode — clipping someone else's content to promote a product</label>
+    </div>
+    ${clipUi.affiliateMode?`<div class="grid grid-2 mb12">
+      <div class="field"><label>Affiliate link</label><input id="clip-afflink" value="${clipUi.affiliateLink}" placeholder="https://..."/></div>
+      <div class="field"><label>Product / offer name</label><input id="clip-affproduct" value="${clipUi.affiliateProduct}" placeholder="e.g. The 40+ Body Reset"/></div>
+    </div>`:''}
+    <button class="btn btn-primary" id="btn-find-clips" ${clipUi.loading?'disabled':''}>${clipUi.loading?'<span class="spinner"></span> Finding clip-worthy moments…':'Find clips'}</button>
+  </div>
+  ${renderClipHistory(d)}
+  `;
+}
+function renderClipHistory(d){
+  if(d.clips.length===0) return emptyState("No clips generated yet","","",null);
+  return d.clips.slice().reverse().map(c=>`
+    <div class="card mb16">
+      <div class="flex between center mb12"><h4 style="font-size:14px;">${c.sourceLabel||'Untitled source'}</h4>${c.affiliate?`<span class="tag tag-red">Affiliate: ${c.affiliateProduct}</span>`:''}</div>
+      <div class="grid grid-2">${c.moments.map(m=>`
+        <div class="card card-tight">
+          <div class="flex between center mb8"><strong class="small">${m.approxTime||''}</strong><span class="tag">${m.viralityReason?'':''}</span></div>
+          <p class="small mb8"><strong>${m.title}</strong></p>
+          <p class="faint small mb8">${m.why}</p>
+          <p class="dim small mb8">${m.caption}</p>
+          <div class="mb8">${PLATFORMS.map(p=>`<span class="platform-chip ${((m.platforms||[]).includes(p))?'on':''}">${p}</span>`).join('')}</div>
+          <button class="btn btn-sm" data-clip-to-pipeline="${c.id}:${m.id}">Send to Pipeline →</button>
+        </div>`).join('')}</div>
+    </div>`).join('');
+}
+function bindClipping(){
+  bindGlobal();
+  const srcInput = document.getElementById('clip-source'); if(srcInput) srcInput.oninput=e=>clipUi.sourceLabel=e.target.value;
+  const transInput = document.getElementById('clip-transcript'); if(transInput) transInput.oninput=e=>clipUi.transcript=e.target.value;
+  const affCheck = document.getElementById('clip-affiliate'); if(affCheck) affCheck.onchange=e=>{ clipUi.affiliateMode=e.target.checked; render(); };
+  const affLink = document.getElementById('clip-afflink'); if(affLink) affLink.oninput=e=>clipUi.affiliateLink=e.target.value;
+  const affProd = document.getElementById('clip-affproduct'); if(affProd) affProd.oninput=e=>clipUi.affiliateProduct=e.target.value;
+
+  const findBtn = document.getElementById('btn-find-clips');
+  if(findBtn) findBtn.onclick = async ()=>{
+    if(!clipUi.transcript.trim()){ showToast("Paste a transcript first", true); return; }
+    clipUi.loading=true; render();
+    try{
+      const affPrompt = clipUi.affiliateMode
+        ? ` This is affiliate mode: weave a natural call-to-action for "${clipUi.affiliateProduct}" (link: ${clipUi.affiliateLink}) into each caption without making it feel like an ad.`
+        : "";
+      const result = await callClaude(
+        `Analyze this transcript and find the 5-8 most clip-worthy, attention-grabbing moments for short-form video (YouTube Shorts, TikTok, Instagram Reels, Twitter/X, Facebook). For each: approximate timestamp or position in the transcript, a short title, why it'll perform, a ready-to-post caption, and which platforms suit it best.${affPrompt}\n\nTranscript:\n${clipUi.transcript.slice(0,6000)}\n\nReturn ONLY JSON array, each item: {"approxTime":"","title":"","why":"","caption":"","platforms":["YouTube Shorts","TikTok"]}. Platform names must exactly match: ${PLATFORMS.join(', ')}.`,
+        "You are a viral short-form video editor who finds the most shareable moments in long content. Output only valid JSON.", true
+      );
+      const clipRecord = { id: uid(), sourceLabel: clipUi.sourceLabel||"Untitled source", affiliate: clipUi.affiliateMode, affiliateProduct: clipUi.affiliateProduct, affiliateLink: clipUi.affiliateLink, moments: result.map(m=>({...m, id:uid()})), createdAt: Date.now() };
+      const d = cd(); d.clips.push(clipRecord); persist();
+      showToast(`Found ${result.length} clip-worthy moments`, false, true);
+    }catch(e){ showToast(e.message, true); }
+    clipUi.loading=false; render();
+  };
+  document.querySelectorAll('[data-clip-to-pipeline]').forEach(el=>el.onclick=()=>{
+    const [clipId, momentId] = el.dataset.clipToPipeline.split(':');
+    const d = cd(); const clip = d.clips.find(c=>c.id===clipId); const m = clip.moments.find(x=>x.id===momentId);
+    const video = { id: uid(), title: m.title, hook: m.caption, viewPotential: "From clip", why: m.why, format:"Short", status:"Idea", script: m.caption, titles:null, thumbnailBrief:null, tags:null, description:null, scheduledDate:null, checklist:{} };
+    d.pipeline.push(video); persist();
+    state.activeTab="content"; contentUi.tab="pipeline"; contentUi.activeVideoId=video.id;
+    showToast("Clip sent to pipeline", false, true); render();
+  });
+}
+
+/* ============================================================ CALENDAR ============================================================ */
+function renderCalendar(){
+  const d = cd();
+  if(d.pipeline.length===0) return `<div class="topbar"><div class="page-title">Content Calendar</div></div>${emptyState("Nothing scheduled yet","Generate video ideas and give them a scheduled date in Content Engine → Checklist.","content","Go to Content Engine")}`;
+  const grouped = {};
+  d.pipeline.forEach(v=>{ const key = v.scheduledDate || "Unscheduled"; grouped[key]=grouped[key]||[]; grouped[key].push(v); });
+  const dates = Object.keys(grouped).sort();
+  return `
+  <div class="topbar"><div><div class="page-title">Content Calendar</div><div class="page-sub">Planned, in production, and published — all in one view.</div></div></div>
+  ${dates.map(date=>`
+    <h4 class="mb12" style="margin-top:18px;">${date}</h4>
+    <div class="grid grid-3 mb16">${grouped[date].map(v=>`
+      <div class="card card-tight">
+        <div class="flex between center mb8"><span class="tag tag-red">${v.format}</span><span class="tag">${v.status}</span></div>
+        <p class="small"><strong>${v.title}</strong></p>
+      </div>`).join('')}</div>
+  `).join('')}
+  `;
+}
+function bindCalendar(){ bindGlobal(); }
+
+/* ============================================================ REVENUE ============================================================ */
+function renderRevenue(){
+  const d = cd(); const r = d.revenue;
+  const zar = state.settings.zarRate;
+  const totalUSD = r.adsenseUSD + r.sponsorships.reduce((a,s)=>a+s.amount,0) + r.digitalProducts.reduce((a,p)=>a+p.amount,0) + r.memberships.reduce((a,m)=>a+m.amount,0);
+  const goalPct = Math.min(100, Math.round((totalUSD/(r.monthlyGoalUSD||1))*100));
+  return `
+  <div class="topbar"><div><div class="page-title">Revenue &amp; Monetization</div><div class="page-sub">AdSense, sponsorships, digital products, and memberships — one number.</div></div></div>
+  <div class="grid grid-4 mb20">
+    <div class="metric-card"><div class="metric-label">Total income (USD)</div><div class="metric-value">$${totalUSD.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Total income (ZAR)</div><div class="metric-value">R${(totalUSD*zar).toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">AdSense (USD)</div><div class="metric-value">$${r.adsenseUSD.toFixed(0)}</div></div>
+    <div class="metric-card"><div class="metric-label">RPM</div><div class="metric-value">${r.shortsViews||r.watchHours? '$'+((r.adsenseUSD/((r.shortsViews||1)/1000)).toFixed(2)) : '—'}</div></div>
+  </div>
+  <div class="card mb20">
+    <div class="flex between center mb12"><h4>Monthly goal</h4><span class="dim small">$${totalUSD.toFixed(0)} / $${r.monthlyGoalUSD}</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${goalPct}%"></div></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h4 class="mb12">Channel stats + AdSense (manual entry)</h4>
+      <p class="hint mb12">Live YouTube Data API / AdSense sync needs OAuth through a backend — browser calls get blocked by CORS and can't hold the refresh token securely. Enter numbers here for now; this feeds the same dashboard the live sync will once the proxy is live.</p>
+      <div class="field"><label>Subscribers</label><input type="number" data-rev="subscribers" value="${r.subscribers}"/></div>
+      <div class="field"><label>Watch hours</label><input type="number" data-rev="watchHours" value="${r.watchHours}"/></div>
+      <div class="field"><label>Shorts views</label><input type="number" data-rev="shortsViews" value="${r.shortsViews}"/></div>
+      <div class="field"><label>AdSense revenue this month (USD)</label><input type="number" data-rev="adsenseUSD" value="${r.adsenseUSD}"/></div>
+      <div class="field"><label>Monthly income goal (USD)</label><input type="number" data-rev="monthlyGoalUSD" value="${r.monthlyGoalUSD}"/></div>
+    </div>
+    <div class="card">
+      <h4 class="mb12">Beyond AdSense</h4>
+      <div class="field"><label>Add sponsorship deal</label>
+        <div class="flex gap8"><input id="sp-brand" placeholder="Brand"/><input id="sp-amount" type="number" placeholder="USD" style="max-width:100px;"/><button class="btn btn-sm" id="btn-add-sponsor">Add</button></div>
+      </div>
+      ${r.sponsorships.map(s=>`<div class="flex between small dim mb8"><span>${s.brand}</span><span>$${s.amount}</span></div>`).join('')}
+      <div class="divider"></div>
+      <div class="field"><label>Add membership / Patreon revenue</label>
+        <div class="flex gap8"><input id="mem-label" placeholder="Label"/><input id="mem-amount" type="number" placeholder="USD" style="max-width:100px;"/><button class="btn btn-sm" id="btn-add-membership">Add</button></div>
+      </div>
+      ${r.memberships.map(m=>`<div class="flex between small dim mb8"><span>${m.label}</span><span>$${m.amount}</span></div>`).join('')}
+    </div>
+  </div>
+  `;
+}
+function bindRevenue(){
+  bindGlobal();
+  document.querySelectorAll('[data-rev]').forEach(el=>el.onchange=e=>{
+    const d = cd(); d.revenue[el.dataset.rev] = parseFloat(e.target.value)||0; persist(); render();
+  });
+  const spBtn = document.getElementById('btn-add-sponsor');
+  if(spBtn) spBtn.onclick=()=>{
+    const brand = document.getElementById('sp-brand').value; const amount = parseFloat(document.getElementById('sp-amount').value)||0;
+    if(!brand||!amount) return; const d=cd(); d.revenue.sponsorships.push({brand,amount}); persist(); render();
+  };
+  const memBtn = document.getElementById('btn-add-membership');
+  if(memBtn) memBtn.onclick=()=>{
+    const label = document.getElementById('mem-label').value; const amount = parseFloat(document.getElementById('mem-amount').value)||0;
+    if(!label||!amount) return; const d=cd(); d.revenue.memberships.push({label,amount}); persist(); render();
+  };
+}
+
+/* ============================================================ SETTINGS ============================================================ */
+function renderSettings(){
+  const s = state.settings;
+  return `
+  <div class="topbar"><div><div class="page-title">Settings</div><div class="page-sub">Voiceover, YouTube connection, and currency.</div></div></div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h4 class="mb12">AI Voiceover</h4>
+      <div class="field"><label>ElevenLabs API key</label><input id="s-eleven" type="password" value="${s.elevenlabsKey}"/></div>
+      <p class="hint">Voiceover generation calls ElevenLabs directly from the browser once a key is set — some accounts allow this via CORS, others will need the Railway proxy like the video/image tools elsewhere in the suite. If it fails, that's why.</p>
+    </div>
+    <div class="card">
+      <h4 class="mb12">YouTube connection</h4>
+      <button class="btn" id="btn-connect-yt">${s.youtubeConnected?'Connected ✓':'Connect YouTube channel'}</button>
+      <p class="hint">Real OAuth + upload scheduling needs a backend to hold the refresh token securely — this is stubbed until the Express proxy is deployed. Once live, this button becomes the real OAuth flow without changing anything else in the app.</p>
+    </div>
+    <div class="card">
+      <h4 class="mb12">Currency</h4>
+      <div class="field"><label>ZAR / USD rate</label><input id="s-rate" type="number" step="0.1" value="${s.zarRate}"/></div>
+    </div>
+    <div class="card">
+      <h4 class="mb12">Data</h4>
+      <p class="small dim mb12">Everything saves automatically to this app's private storage.</p>
+      <button class="btn" id="btn-reset">Reset all data</button>
+    </div>
+  </div>
+  `;
+}
+function bindSettings(){
+  bindGlobal();
+  const eleven = document.getElementById('s-eleven'); if(eleven) eleven.onchange=e=>{ state.settings.elevenlabsKey=e.target.value; persist(); };
+  const rate = document.getElementById('s-rate'); if(rate) rate.onchange=e=>{ state.settings.zarRate=parseFloat(e.target.value)||18.5; persist(); };
+  const connBtn = document.getElementById('btn-connect-yt');
+  if(connBtn) connBtn.onclick=()=>{ showToast("YouTube OAuth needs the backend proxy — stubbed for now.", true); };
+  const reset = document.getElementById('btn-reset');
+  if(reset) reset.onclick = async ()=>{
+    if(!confirm("This clears all channels, content, and settings. Continue?")) return;
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+    render();
+  };
+}
+
+/* ---------- init ---------- */
+loadState();
+</script>
+</body>
+</html>
